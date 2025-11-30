@@ -3,7 +3,7 @@ package strategy
 import model.Coordinate
 import model.ShotResult
 
-class InformedRandomPlayerStrategy : RandomPlayerStrategy() {
+open class InformedRandomPlayerStrategy : RandomPlayerStrategy() {
     private val hitsNotSunk = mutableListOf<Coordinate>()
 
     override fun nextShot(boardSize: Int): Coordinate {
