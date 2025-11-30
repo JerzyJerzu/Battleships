@@ -10,8 +10,8 @@ object Game {
 
     fun play(player1Strategy: PlayerStrategy, player2Strategy: PlayerStrategy) {
         // State must be local to the play session to ensure reusability of the Singleton
-        val board1 = Board() // Player 1's board (Our board)
-        val board2 = Board() // Player 2's board (Enemy board)
+        val board1 = Board(shipTypes = shipConfiguration) // Player 1's board (Our board)
+        val board2 = Board(shipTypes = shipConfiguration) // Player 2's board (Enemy board)
         var player1Shots = 0
         var player2Shots = 0
 

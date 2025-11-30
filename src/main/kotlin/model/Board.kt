@@ -1,10 +1,10 @@
 package model
 
-class Board(val size: Int = 10) {
+class Board(val size: Int = 10, shipTypes: List<Int>) {
+    private val allowedShips = shipTypes.groupingBy { it }.eachCount() // Map of ship size to allowed count
     private val ships = mutableListOf<Ship>()
     private val takenCoordinates = mutableSetOf<Coordinate>()
     private val shots = mutableMapOf<Coordinate, ShotResult>()
-    private var hits = 0
 
     /**
      * Tries to place a ship on the board.
@@ -12,6 +12,11 @@ class Board(val size: Int = 10) {
      */
     fun placeShip(ship: Ship): Boolean {
         if (!canPlaceShip(ship)) return false
+
+        // Check if we have already placed the maximum number of ships of this size
+        val currentCount = ships.count { it.size == ship.size }
+        val maxCount = allowedShips[ship.size] ?: 0
+        if (currentCount >= maxCount) return false
 
         ships.add(ship)
         takenCoordinates.addAll(ship.coordinates)
@@ -56,17 +61,13 @@ class Board(val size: Int = 10) {
         val result = if (takenCoordinates.contains(coord)){
             val hitShip = ships.find { it.coordinates.contains(coord) }
             if (hitShip == null) throw IllegalArgumentException("Occupied coordinate $coord does not belong to any ship!")
-            val shipCoords = hitShip.coordinates
-            // Check if all other parts are already hit
-            // TODO optional - optimize this by storing this info in the ship itself
-            val otherHits = shipCoords.filter { it != coord && (shots[it] is ShotResult.Hit || shots[it] is ShotResult.Sunk) }
+            
+            hitShip.registerHit(coord)
 
-            if (otherHits.size == hitShip.size - 1) {
-                hits++
+            if (hitShip.isSunk) {
                 ShotResult.Sunk(hitShip.size)
             }
             else {
-                hits++
                 ShotResult.Hit
             }
         }
@@ -79,9 +80,8 @@ class Board(val size: Int = 10) {
     }
 
     fun allShipsSunk(): Boolean {
-        val totalShipsHp = ships.sumOf { it.size }
-        return totalShipsHp == hits
+        return ships.isNotEmpty() && ships.all { it.isSunk }
     }
-    
+
     fun getShips(): List<Ship> = ships.toList()
 }

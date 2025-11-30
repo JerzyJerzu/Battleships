@@ -10,4 +10,15 @@ data class Ship(val size: Int, val head: Coordinate, val direction: Direction) {
             }
         }.toSet()
     }
+
+    private val hits = mutableSetOf<Coordinate>()
+
+    fun registerHit(coord: Coordinate) {
+        if (coord in coordinates) {
+            hits.add(coord)
+        }
+    }
+
+    val isSunk: Boolean
+        get() = hits.size == size
 }
