@@ -22,11 +22,18 @@ class RandomPlayerStrategy : PlayerStrategy {
             var placed = false
             var attempts = 0
             // Simple retry mechanism for placement
-            while (!placed && attempts < 1000) {
-                val x = Random.nextInt(board.size)
-                val y = Random.nextInt(board.size)
+            while (!placed && attempts < 10000) {
                 val direction = if (Random.nextBoolean()) Direction.HORIZONTAL else Direction.VERTICAL
-                val ship = Ship(size, Coordinate(x, y), direction)
+                val x: Int
+                val y: Int
+                if (direction == Direction.HORIZONTAL) {
+                    x = Random.nextInt(board.size - size + 1)
+                    y = Random.nextInt(board.size)
+                } else {
+                    x = Random.nextInt(board.size)
+                    y = Random.nextInt(board.size - size + 1)
+                }
+                    val ship = Ship(size, Coordinate(x, y), direction)
 
                 if (board.placeShip(ship)) {
                     placed = true
