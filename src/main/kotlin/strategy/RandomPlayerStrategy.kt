@@ -18,7 +18,7 @@ class RandomPlayerStrategy : PlayerStrategy {
     private val forbiddenMoves = mutableSetOf<Coordinate>()
 
     override fun placeShips(board: Board, shipSizes: List<Int>) {
-        for (size in shipSizes) {
+        for (size in shipSizes.sortedDescending()) {
             var placed = false
             var attempts = 0
             // Simple retry mechanism for placement
