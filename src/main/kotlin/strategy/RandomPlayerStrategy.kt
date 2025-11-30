@@ -41,7 +41,7 @@ open class RandomPlayerStrategy : PlayerStrategy {
                 attempts++
             }
             if (!placed) {
-                println("Warning: Could not place ship of size $size after $attempts attempts.")
+                throw IllegalStateException("Could not place ship of size $size after $attempts attempts.")
             }
         }
     }
