@@ -13,9 +13,9 @@ import kotlin.random.Random
  * 2. Shoots randomly but remembers history.
  * 3. Respects the rule "do not shoot known empty fields" by marking neighbors of sunk ships as forbidden.
  */
-class RandomPlayerStrategy : PlayerStrategy {
-    private val shotHistory = mutableMapOf<Coordinate, ShotResult>()
-    private val forbiddenMoves = mutableSetOf<Coordinate>()
+open class RandomPlayerStrategy : PlayerStrategy {
+    protected val shotHistory = mutableMapOf<Coordinate, ShotResult>()
+    protected val forbiddenMoves = mutableSetOf<Coordinate>()
 
     override fun placeShips(board: Board, shipSizes: List<Int>) {
         for (size in shipSizes.sortedDescending()) {
