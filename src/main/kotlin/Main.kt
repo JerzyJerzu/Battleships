@@ -4,6 +4,7 @@ import strategy.PlayerStrategy
 import strategy.RandomPlayerStrategy
 import strategy.TryHardPlayerStrategy
 
+//TODO create a rest API
 fun main(args: Array<String>) {
     println("Initializing Battleships...")
 
