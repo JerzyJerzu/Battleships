@@ -1,66 +1,160 @@
 package game
 
 import model.Board
+import model.Coordinate
+import model.ShotResult
 import strategy.PlayerStrategy
 import util.GameLogger
+import java.util.UUID
 
-object Game {
+enum class GameStatus { IN_PROGRESS, FINISHED }
 
-    private val shipConfiguration = listOf(4, 3, 3, 2, 2, 2, 1, 1, 1, 1)
+enum class PlayerType { HUMAN, AI }
 
-    fun play(player1Strategy: PlayerStrategy, player2Strategy: PlayerStrategy) {
-        // State must be local to the play session to ensure reusability of the Singleton
-        val board1 = Board(shipTypes = shipConfiguration) // Player 1's board (Our board)
-        val board2 = Board(shipTypes = shipConfiguration) // Player 2's board (Enemy board)
-        var player1Shots = 0
-        var player2Shots = 0
+data class TurnResult(
+    val player: Int,
+    val target: Coordinate,
+    val result: ShotResult,
+    val gameOver: Boolean,
+    val winner: Int?
+)
 
-        setupPhase(board1, board2, player1Strategy, player2Strategy)
+class Game(
+    val id: String = UUID.randomUUID().toString(),
+    private val player1Strategy: PlayerStrategy,
+    private val player2Strategy: PlayerStrategy,
+    private val player1Type: PlayerType = PlayerType.AI,
+    private val player2Type: PlayerType = PlayerType.AI,
+    private val shipConfiguration: List<Int> = listOf(4, 3, 3, 2, 2, 2, 1, 1, 1, 1)
+) {
+    // Game state - instance properties
+    val board1 = Board(shipTypes = shipConfiguration)  // Player 1's board
+    val board2 = Board(shipTypes = shipConfiguration)  // Player 2's board
 
-        var turn = 1
-        while (!board1.allShipsSunk() && !board2.allShipsSunk()) {
-            if (turn == 1) {
-                player1Shots += playTurn1(board2, player1Strategy)
-                turn = 2
-            } else {
-                player2Shots += playTurn2(board1, player2Strategy)
-                turn = 1
+    var status: GameStatus = GameStatus.IN_PROGRESS
+        private set
+    var currentTurn: Int = 0
+        private set
+    var currentPlayer: Int = 1
+        private set
+    var winner: Int? = null
+        private set
+
+    private var player1Shots = 0
+    private var player2Shots = 0
+
+    init {
+        // Setup happens on creation - ships are placed automatically
+        setupPhase()
+    }
+
+    /**
+     * Execute one turn of the game.
+     * For HUMAN players: move must be provided
+     * For AI players: move must NOT be provided (strategy decides)
+     */
+    fun playNextTurn(move: Coordinate? = null): TurnResult? {
+        if (status == GameStatus.FINISHED) return null
+
+        val (targetBoard, strategy, playerType) = if (currentPlayer == 1) {
+            Triple(board2, player1Strategy, player1Type)
+        } else {
+            Triple(board1, player2Strategy, player2Type)
+        }
+
+        // Explicit validation based on player type
+        val target = when (playerType) {
+            PlayerType.HUMAN -> {
+                move ?: throw IllegalArgumentException(
+                    "Human player (player $currentPlayer) must provide a move"
+                )
+            }
+            PlayerType.AI -> {
+                if (move != null) {
+                    throw IllegalArgumentException(
+                        "AI player (player $currentPlayer) chooses its own move - do not provide a move"
+                    )
+                }
+                strategy.nextShot(targetBoard.size)
             }
         }
 
-        endGamePhase(board2, player1Shots, player2Shots)
+        // Execute the shot
+        val result = targetBoard.receiveShot(target)
+        strategy.recordShotResult(target, result)
+
+        // Update counters
+        if (currentPlayer == 1) player1Shots++ else player2Shots++
+        currentTurn++
+
+        val shootingPlayer = currentPlayer
+
+        // Check for winner
+        if (targetBoard.allShipsSunk()) {
+            status = GameStatus.FINISHED
+            winner = currentPlayer
+        }
+
+        // Switch player for next turn
+        currentPlayer = if (currentPlayer == 1) 2 else 1
+
+        return TurnResult(
+            player = shootingPlayer,
+            target = target,
+            result = result,
+            gameOver = status == GameStatus.FINISHED,
+            winner = winner
+        )
     }
 
-    private fun setupPhase(board1: Board, board2: Board, p1Strategy: PlayerStrategy, p2Strategy: PlayerStrategy) {
-        p1Strategy.placeShips(board1, shipConfiguration)
+    /**
+     * Play the entire game in a loop (for CLI usage).
+     * Only works for AI vs AI games.
+     */
+    fun play() {
+        if (player1Type == PlayerType.HUMAN || player2Type == PlayerType.HUMAN) {
+            throw IllegalStateException(
+                "play() only works for AI vs AI games. Use playNextTurn() for games with human players."
+            )
+        }
+
+        while (status == GameStatus.IN_PROGRESS) {
+            val turn = playNextTurn()!!
+
+            // Log based on who shot
+            if (turn.player == 1) {
+                GameLogger.logShot(turn.target, turn.result)
+            } else {
+                GameLogger.logEnemyShot(turn.target, turn.result)
+            }
+        }
+
+        endGamePhase()
+    }
+
+    private fun setupPhase() {
+        player1Strategy.placeShips(board1, shipConfiguration)
         board1.getShips().forEach { ship ->
             GameLogger.logPlaceShip(ship.size, ship.head, ship.direction)
         }
-        p2Strategy.placeShips(board2, shipConfiguration)
+        player2Strategy.placeShips(board2, shipConfiguration)
     }
 
-    private fun playTurn1(targetBoard: Board, strategy: PlayerStrategy): Int {
-        val target = strategy.nextShot(targetBoard.size)
-        val result = targetBoard.receiveShot(target)
-        strategy.recordShotResult(target, result)
-        GameLogger.logShot(target, result)
-        return 1
-    }
-
-    private fun playTurn2(targetBoard: Board, strategy: PlayerStrategy): Int {
-        val target = strategy.nextShot(targetBoard.size)
-        val result = targetBoard.receiveShot(target)
-        strategy.recordShotResult(target, result)
-        GameLogger.logEnemyShot(target, result)
-        return 1
-    }
-
-    private fun endGamePhase(board2: Board, p1Shots: Int, p2Shots: Int) {
+    private fun endGamePhase() {
         val gameResult = if (board2.allShipsSunk()) "win" else "loss"
-        GameLogger.logGameOver(gameResult, p1Shots, p2Shots)
-        
+        GameLogger.logGameOver(gameResult, player1Shots, player2Shots)
+
         board2.getShips().forEach { ship ->
             GameLogger.logEnemyShip(ship.size, ship.head, ship.direction)
         }
     }
+
+    // Helper function to get current player's type (useful for frontend)
+    fun getCurrentPlayerType(): PlayerType {
+        return if (currentPlayer == 1) player1Type else player2Type
+    }
+
+    // Helper to get strategy info for display
+    fun getPlayer1StrategyName(): String = player1Strategy::class.simpleName ?: "Unknown"
+    fun getPlayer2StrategyName(): String = player2Strategy::class.simpleName ?: "Unknown"
 }

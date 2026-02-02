@@ -21,11 +21,12 @@ fun main(args: Array<String>) {
             player2Strategy = InformedRandomPlayerStrategy()
         }
 
-        // Game is now a singleton object
-        Game.play(
+        // Create game instance and play
+        val game = Game(
             player1Strategy = player1Strategy,
             player2Strategy = player2Strategy
         )
+        game.play()
         println("Game completed successfully.")
     } catch (e: Exception) {
         e.printStackTrace()
