@@ -119,7 +119,9 @@ class Game(
         }
 
         while (status == GameStatus.IN_PROGRESS) {
-            val turn = playNextTurn()!!
+            val turn = requireNotNull(playNextTurn()) {
+                "playNextTurn returned null while game status is IN_PROGRESS"
+            }
 
             // Log based on who shot
             if (turn.player == 1) {

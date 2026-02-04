@@ -40,10 +40,10 @@ class TryHardPlayerStrategy : InformedRandomPlayerStrategy() {
         println("Excluding filed where no ship can fit minShipSize: $minShipSize")
         // Identify cells that cannot effectively hold any of the remaining ships
         // We check horizontal availability and vertical availability separately.
-
+        // TODO Get rid of of the reptitive code later
         val uselessHorizontal = mutableSetOf<Coordinate>()
         val uselessVertical = mutableSetOf<Coordinate>()
-
+        // TODO check it against warning "Warning:(48, 19) This range is empty. Did you mean to use 'rangeTo'?"
         // Check rows for horizontal segments
         for (y in 0 until capturedBoardSize) {
             var segmentLength = 0

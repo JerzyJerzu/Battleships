@@ -59,9 +59,9 @@ class Board(val size: Int = 10, shipTypes: List<Int>) {
         if (!coord.isValid(size)) throw IllegalArgumentException("Invalid coordinate: $coord")
 
         val result = if (takenCoordinates.contains(coord)){
-            val hitShip = ships.find { it.coordinates.contains(coord) }
-            if (hitShip == null) throw IllegalArgumentException("Occupied coordinate $coord does not belong to any ship!")
-            
+            val hitShip = requireNotNull(ships.find { it.coordinates.contains(coord) }) {
+                "Occupied coordinate $coord does not belong to any ship!"
+            }
             hitShip.registerHit(coord)
 
             if (hitShip.isSunk) {

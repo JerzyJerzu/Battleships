@@ -40,9 +40,7 @@ open class RandomPlayerStrategy : PlayerStrategy {
                 }
                 attempts++
             }
-            if (!placed) {
-                throw IllegalStateException("Could not place ship of size $size after $attempts attempts.")
-            }
+            require(placed) { "Could not place ship of size $size after $attempts attempts" }
         }
     }
 
