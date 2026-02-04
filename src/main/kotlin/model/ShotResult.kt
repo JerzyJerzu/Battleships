@@ -1,5 +1,8 @@
 package model
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+
+@JsonSerialize(using = ShotResultSerializer::class)
 sealed class ShotResult {
     object Miss : ShotResult() {
         override fun toString() = "miss"

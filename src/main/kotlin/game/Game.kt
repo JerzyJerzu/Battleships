@@ -39,7 +39,7 @@ data class GameStateSnapshot(
     val turn: Int,
     val currentPlayer: Int,
     val status: GameStatus,
-    val winner: Int?,
+    val player1Won: Boolean?,  // null=ongoing, true=P1 won, false=P1 lost
     val player1State: StrategyState,
     val player2State: StrategyState
 )
@@ -108,7 +108,7 @@ class Game(
                 turn = currentTurn,
                 currentPlayer = currentPlayer,
                 status = status,
-                winner = winner,
+                player1Won = winner?.let { it == 1 },  // 1→true, 2→false, null→null
                 player1State = StrategyState(
                     shotsFired = player1Strategy.getShotHistory(),
                     forbiddenMoves = player1Strategy.getForbiddenMoves()
