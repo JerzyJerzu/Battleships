@@ -2,6 +2,7 @@ package game
 
 import model.Board
 import model.Coordinate
+import model.Direction
 import model.ShotResult
 import strategy.PlayerStrategy
 import util.GameLogger
@@ -18,6 +19,43 @@ data class TurnResult(
     val gameOver: Boolean,
     val winner: Int?
 )
+
+/** Ship position (static, set at game start) */
+data class ShipPosition(
+    val size: Int,
+    val x: Int,
+    val y: Int,
+    val direction: Direction
+)
+
+/** Player's strategy state at a moment */
+data class StrategyState(
+    val shotsFired: Map<Coordinate, ShotResult>,
+    val forbiddenMoves: Set<Coordinate>
+)
+
+/** Game state snapshot at a turn */
+data class GameStateSnapshot(
+    val turn: Int,
+    val currentPlayer: Int,
+    val status: GameStatus,
+    val winner: Int?,
+    val player1State: StrategyState,
+    val player2State: StrategyState
+)
+
+/** Complete game history - ship layouts (static) + snapshots (per turn) */
+class GameHistory(
+    val player1ShipLayout: List<ShipPosition>,
+    val player2ShipLayout: List<ShipPosition>
+) {
+    private val _snapshots = mutableListOf<GameStateSnapshot>()
+    val snapshots: List<GameStateSnapshot> get() = _snapshots.toList()
+
+    fun addSnapshot(snapshot: GameStateSnapshot) {
+        _snapshots.add(snapshot)
+    }
+}
 
 class Game(
     val id: String = UUID.randomUUID().toString(),
@@ -43,9 +81,44 @@ class Game(
     private var player1Shots = 0
     private var player2Shots = 0
 
+    // Game history - initialized after ships are placed
+    lateinit var history: GameHistory
+        private set
+
     init {
-        // Setup happens on creation - ships are placed automatically
         setupPhase()
+        initializeHistory()
+        captureSnapshot()  // Turn 0 - initial state
+    }
+
+    private fun initializeHistory() {
+        history = GameHistory(
+            player1ShipLayout = board1.getShips().map { ship ->
+                ShipPosition(ship.size, ship.head.x, ship.head.y, ship.direction)
+            },
+            player2ShipLayout = board2.getShips().map { ship ->
+                ShipPosition(ship.size, ship.head.x, ship.head.y, ship.direction)
+            }
+        )
+    }
+
+    private fun captureSnapshot() {
+        history.addSnapshot(
+            GameStateSnapshot(
+                turn = currentTurn,
+                currentPlayer = currentPlayer,
+                status = status,
+                winner = winner,
+                player1State = StrategyState(
+                    shotsFired = player1Strategy.getShotHistory(),
+                    forbiddenMoves = player1Strategy.getForbiddenMoves()
+                ),
+                player2State = StrategyState(
+                    shotsFired = player2Strategy.getShotHistory(),
+                    forbiddenMoves = player2Strategy.getForbiddenMoves()
+                )
+            )
+        )
     }
 
     /**
@@ -97,6 +170,9 @@ class Game(
 
         // Switch player for next turn
         currentPlayer = if (currentPlayer == 1) 2 else 1
+
+        // Capture state after this turn
+        captureSnapshot()
 
         return TurnResult(
             player = shootingPlayer,

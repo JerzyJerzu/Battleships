@@ -1,21 +1,21 @@
 package service
 
 import game.Game
+import game.GameHistory
 import game.GameStatus
 import game.PlayerType
 import game.TurnResult
 import model.Coordinate
+import org.springframework.stereotype.Service
 import repository.GameRepository
 import strategy.PlayerStrategy
 
-/**
- * Service layer for game operations.
- * Returns sealed result types instead of throwing exceptions.
- */
+/** Service layer for game operations. Returns sealed result types. */
+@Service
 class GameService internal constructor(
     private val gameRepository: GameRepository
 ) {
-    // Result types - each operation has explicit success/failure cases
+    // Result types
     sealed class CreateGameResult {
         data class Success(val gameId: String) : CreateGameResult()
         data class Error(val message: String) : CreateGameResult()
@@ -34,7 +34,12 @@ class GameService internal constructor(
         data class NotYourTurn(val currentPlayer: Int) : MoveResult()
     }
 
-    // DTO - exposes only what frontend needs, hides internal game state
+    sealed class SimulateResult {
+        data class Success(val gameId: String, val winner: Int, val history: GameHistory) : SimulateResult()
+        data class Error(val message: String) : SimulateResult()
+    }
+
+    // DTO
     data class GameState(
         val id: String,
         val status: GameStatus,
@@ -120,6 +125,31 @@ class GameService internal constructor(
             }
         } catch (e: Exception) {
             MoveResult.InvalidMove(e.message ?: "AI move failed")
+        }
+    }
+
+    /** Runs complete AI vs AI game, returns full history */
+    fun simulateGame(
+        player1Strategy: PlayerStrategy,
+        player2Strategy: PlayerStrategy
+    ): SimulateResult {
+        return try {
+            val game = Game(
+                player1Strategy = player1Strategy,
+                player2Strategy = player2Strategy,
+                player1Type = PlayerType.AI,
+                player2Type = PlayerType.AI
+            )
+
+            // Run game to completion
+            while (game.status == GameStatus.IN_PROGRESS) {
+                game.playNextTurn()
+            }
+
+            val winner = requireNotNull(game.winner) { "Game finished but no winner" }
+            SimulateResult.Success(game.id, winner, game.history)
+        } catch (e: Exception) {
+            SimulateResult.Error("Simulation failed: ${e.message}")
         }
     }
 

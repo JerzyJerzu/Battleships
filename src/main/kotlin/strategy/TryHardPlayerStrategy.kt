@@ -99,12 +99,12 @@ class TryHardPlayerStrategy : InformedRandomPlayerStrategy() {
         // (meaning no ship of minSize can cover it horizontally AND no ship of minSize can cover it vertically)
         val trulyForbiddenCandidates = uselessHorizontal.intersect(uselessVertical)
 
-        // Filter out any coordinates that have already been shot at, then add to forbiddenMoves
-        trulyForbiddenCandidates.filterTo(forbiddenMoves) { it !in shotHistory }
+        // Filter out any coordinates that have already been shot at, then add to _forbiddenMoves
+        trulyForbiddenCandidates.filterTo(_forbiddenMoves) { it !in _shotHistory }
     }
 
     private fun isPassable(c: Coordinate): Boolean {
-        if (c in forbiddenMoves || c in shotHistory) return false
+        if (c in _forbiddenMoves || c in _shotHistory) return false
         return true
     }
 }

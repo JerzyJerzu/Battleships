@@ -17,8 +17,8 @@ open class InformedRandomPlayerStrategy : RandomPlayerStrategy() {
         // Find the first valid target that hasn't been shot at yet
         val target = potentialTargets.firstOrNull {
             it.isValid(boardSize) &&
-                    it !in shotHistory &&
-                    it !in forbiddenMoves
+                    it !in _shotHistory &&
+                    it !in _forbiddenMoves
         }
 
         // If no smart targets are valid (should rarely happen if logic is correct), fallback to random

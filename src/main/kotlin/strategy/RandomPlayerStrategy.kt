@@ -14,8 +14,8 @@ import kotlin.random.Random
  * 3. Respects the rule "do not shoot known empty fields" by marking neighbors of sunk ships as forbidden.
  */
 open class RandomPlayerStrategy : PlayerStrategy {
-    protected val shotHistory = mutableMapOf<Coordinate, ShotResult>()
-    protected val forbiddenMoves = mutableSetOf<Coordinate>()
+    protected val _shotHistory = mutableMapOf<Coordinate, ShotResult>()
+    protected val _forbiddenMoves = mutableSetOf<Coordinate>()
 
     override fun placeShips(board: Board, shipSizes: List<Int>) {
         for (size in shipSizes.sortedDescending()) {
@@ -51,16 +51,20 @@ open class RandomPlayerStrategy : PlayerStrategy {
             val x = Random.nextInt(boardSize)
             val y = Random.nextInt(boardSize)
             coord = Coordinate(x, y)
-        } while (coord in shotHistory || coord in forbiddenMoves)
+        } while (coord in _shotHistory || coord in _forbiddenMoves)
         return coord
     }
 
     override fun recordShotResult(coord: Coordinate, result: ShotResult) {
-        shotHistory[coord] = result
+        _shotHistory[coord] = result
         if (result is ShotResult.Sunk) {
             markNeighborsAsForbidden(coord)
         }
     }
+
+    override fun getForbiddenMoves(): Set<Coordinate> = _forbiddenMoves.toSet()
+
+    override fun getShotHistory(): Map<Coordinate, ShotResult> = _shotHistory.toMap()
 
     /**
      * When a ship is sunk, we know that all surrounding orthogonal fields must be empty
@@ -78,7 +82,7 @@ open class RandomPlayerStrategy : PlayerStrategy {
             val current = queue.removeFirst()
             getOrthogonalNeighbors(current).forEach { n ->
                 // Traverse only through Hits or the Sunk spot that belong to this ship
-                if (n !in shipParts && (shotHistory[n] is ShotResult.Hit || shotHistory[n] is ShotResult.Sunk)) {
+                if (n !in shipParts && (_shotHistory[n] is ShotResult.Hit || _shotHistory[n] is ShotResult.Sunk)) {
                     shipParts.add(n)
                     queue.add(n)
                 }
@@ -88,8 +92,8 @@ open class RandomPlayerStrategy : PlayerStrategy {
         // Mark valid neighbors of the whole ship as forbidden
         shipParts.forEach { part ->
             getOrthogonalNeighbors(part).forEach { n ->
-                if (n !in shotHistory) {
-                    forbiddenMoves.add(n)
+                if (n !in _shotHistory) {
+                    _forbiddenMoves.add(n)
                 }
             }
         }

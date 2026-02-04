@@ -1,7 +1,9 @@
 package repository
 
 import game.Game
+import org.springframework.stereotype.Repository
 
+@Repository
 class GameRepository internal constructor() {
     private val games = mutableMapOf<String, Game>()
 
