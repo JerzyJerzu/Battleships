@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ShipPosition, PlayerState, Coordinate, ShotResult } from '../../types';
+	import type { ShipPosition, PlayerState, ShotResult } from '../../types';
 	import BoardCell from './BoardCell.svelte';
 
 	interface Props {
@@ -27,13 +27,26 @@
 	});
 
 	// Create a map of shots for quick lookup
+	// Backend format: { "(x,y)": "hit" | "miss" | "sunk ship-size=N" }
 	const shotMap = $derived.by(() => {
 		const map = new Map<string, ShotResult>();
-		for (const shot of opponentState.shotsFired) {
-			map.set(`${shot.coordinate.x},${shot.coordinate.y}`, shot.result);
+		for (const [key, result] of Object.entries(opponentState.shotsFired)) {
+			// Key is "(x,y)" - convert to "x,y" for our internal lookup
+			const cleanKey = key.replace(/[()]/g, '');
+			// Normalize result: "sunk ship-size=4" -> "sunk"
+			const normalizedResult = normalizeResult(result);
+			map.set(cleanKey, normalizedResult);
 		}
 		return map;
 	});
+
+	// Normalize backend result to ShotResult type
+	function normalizeResult(result: string): ShotResult {
+		if (result === 'miss') return 'miss';
+		if (result === 'hit') return 'hit';
+		if (result.startsWith('sunk')) return 'sunk';
+		return 'miss'; // fallback
+	}
 
 	// Create a set of forbidden cells for quick lookup
 	const forbiddenCells = $derived.by(() => {

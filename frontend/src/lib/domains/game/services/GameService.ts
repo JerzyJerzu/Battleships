@@ -1,5 +1,4 @@
-import type { GameState, GameResponse, GameResponseRaw, PlayerType, ErrorResponse } from '../types';
-import { transformGameResponse } from './transformers';
+import type { GameState, GameResponse, PlayerType, ErrorResponse } from '../types';
 
 const API_URL = 'http://localhost:8080/api/games';
 
@@ -34,14 +33,14 @@ export class GameService {
 
 	/**
 	 * Get full game history by ID.
+	 * Returns backend format directly - no transformation.
 	 */
 	static async getGame(id: string): Promise<GameResponse> {
 		const response = await fetch(`${API_URL}/${id}`);
 		if (!response.ok) {
 			await throwApiError(response, `Failed to get game ${id}`);
 		}
-		const raw: GameResponseRaw = await response.json();
-		return transformGameResponse(raw);
+		return response.json();
 	}
 
 	/**
@@ -67,7 +66,6 @@ export class GameService {
 			await throwApiError(response, 'Failed to create AI vs AI game');
 		}
 
-		const raw: GameResponseRaw = await response.json();
-		return transformGameResponse(raw);
+		return response.json();
 	}
 }
