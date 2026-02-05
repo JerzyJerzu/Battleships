@@ -26,6 +26,11 @@ class GameService internal constructor(
         data class NotFound(val gameId: String) : GetGameResult()
     }
 
+    sealed class GetGameHistoryResult {
+        data class Success(val gameId: String, val history: GameHistory) : GetGameHistoryResult()
+        data class NotFound(val gameId: String) : GetGameHistoryResult()
+    }
+
     sealed class MoveResult {
         data class Success(val turnResult: TurnResult) : MoveResult()
         data class NotFound(val gameId: String) : MoveResult()
@@ -78,8 +83,21 @@ class GameService internal constructor(
         return GetGameResult.Success(game.toGameState())
     }
 
+    /** Retrieves full game history by ID */
+    fun getGameHistory(gameId: String): GetGameHistoryResult {
+        val game = gameRepository.findById(gameId)
+            ?: return GetGameHistoryResult.NotFound(gameId)
+
+        return GetGameHistoryResult.Success(gameId, game.history)
+    }
+
+    /** Lists all saved games (summary only, no history) */
+    fun listGames(): List<GameState> {
+        return gameRepository.findAll().map { it.toGameState() }
+    }
+
     /** Executes a move for HUMAN player at given coordinate */
-    fun makeMove(gameId: String, coordinate: Coordinate): MoveResult {
+    fun playHumanMove(gameId: String, coordinate: Coordinate): MoveResult {
         val game = gameRepository.findById(gameId)
             ?: return MoveResult.NotFound(gameId)
 
@@ -119,6 +137,7 @@ class GameService internal constructor(
         return try {
             val turnResult = game.playNextTurn()
             if (turnResult != null) {
+                gameRepository.save(game)  // Save updated game state
                 MoveResult.Success(turnResult)
             } else {
                 MoveResult.GameAlreadyFinished(gameId)
@@ -145,6 +164,9 @@ class GameService internal constructor(
             while (game.status == GameStatus.IN_PROGRESS) {
                 game.playNextTurn()
             }
+
+            // Save completed game to repository
+            gameRepository.save(game)
 
             val winner = requireNotNull(game.winner) { "Game finished but no winner" }
             SimulateResult.Success(game.id, winner, game.history)

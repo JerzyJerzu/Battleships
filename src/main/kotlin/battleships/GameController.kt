@@ -39,6 +39,25 @@ class GameController internal constructor(
 
     // === Endpoints ===
 
+    /** GET /api/games - List all saved games (summary only) */
+    @GetMapping
+    fun listGames(): ResponseEntity<List<GameService.GameState>> {
+        return ResponseEntity.ok(gameService.listGames())
+    }
+
+    /** GET /api/games/{id} - Get full game history by ID */
+    @GetMapping("/{id}")
+    fun getGame(@PathVariable id: String): ResponseEntity<*> {
+        return when (val result = gameService.getGameHistory(id)) {
+            is GameService.GetGameHistoryResult.Success ->
+                ResponseEntity.ok(GameResponse(result.gameId, result.history))
+
+            is GameService.GetGameHistoryResult.NotFound ->
+                ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ErrorResponse("Game ${result.gameId} not found"))
+        }
+    }
+
     /** POST /api/games/ai-vs-ai - Run AI vs AI game, return full history */
     @PostMapping("/ai-vs-ai")
     fun aiVsAi(@RequestBody request: AIvsAIRequest): ResponseEntity<*> {
